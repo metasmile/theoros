@@ -145,6 +145,25 @@ async function act(send, [what, a, b]) {
     if (!found) return console.warn(`demo: no button for ${a}`);
     return press(found);
   }
+  if (what === 'face') {
+    // A press on a mark of the minimap faces the bearing that mark stands at, so the pane swings to a world, a gate or a
+    // berth the way a reader does it. The mark is named by the title the disc gives it, which is the only handle an SVG
+    // circle offers.
+    const at = await evaluate(
+      `(() => {
+         const titles = [...document.querySelectorAll('svg[data-region=sphere-minimap] title')];
+         const wanted = ${JSON.stringify(a)};
+         const hit =
+           titles.find((e) => (e.textContent || '').trim() === wanted) ??
+           titles.find((e) => (e.textContent || '').includes(wanted));
+         if (!hit) return null;
+         const b = hit.parentElement.getBoundingClientRect();
+         return { x: Math.round(b.x + b.width / 2), y: Math.round(b.y + b.height / 2) };
+       })()`,
+    );
+    if (!at) return console.warn(`demo: no minimap mark for ${a}`);
+    return press(at);
+  }
   if (what === 'wheel') {
     // The board's own canvas and not just the first one on the page: a split board draws the region beside the sphere,
     // and a wheel over the wrong canvas zooms the wrong picture.
@@ -156,7 +175,7 @@ async function act(send, [what, a, b]) {
     const steps = 30;
     for (let step = 0; step < steps; step += 1) {
       await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: at.x, y: at.y, deltaX: 0, deltaY: total / steps });
-      await sleep(17);
+      await sleep(14);
     }
     return;
   }
@@ -173,7 +192,7 @@ async function act(send, [what, a, b]) {
         button: 'left',
         buttons: 1,
       });
-      await sleep(45);
+      await sleep(16);
     }
     await send('Input.dispatchMouseEvent', {
       type: 'mouseReleased',
