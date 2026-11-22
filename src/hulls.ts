@@ -239,19 +239,19 @@ function gateParts(): Part[] {
 /** A planet: a shaded body with one lit band, which is what tells it from a moon at a mark's size. */
 function planetParts(): Part[] {
   return [
-    { shape: new THREE.SphereGeometry(0.032, 18, 12), tone: 1 },
-    { shape: new THREE.TorusGeometry(0.033, 0.0015, 4, 24), turn: [Math.PI / 2, 0, 0], tone: 1.12 },
+    { shape: new THREE.SphereGeometry(0.026, 18, 12), tone: 1 },
+    { shape: new THREE.TorusGeometry(0.027, 0.0012, 4, 24), turn: [Math.PI / 2, 0, 0], tone: 1.12 },
   ];
 }
 
 /** A moon: a body small enough that the orbit it stands in is what says what it is. */
 function moonParts(): Part[] {
-  return [{ shape: new THREE.SphereGeometry(0.018, 12, 8), tone: 0.95 }];
+  return [{ shape: new THREE.SphereGeometry(0.016, 12, 8), tone: 0.95 }];
 }
 
 /** A belt: the ring its rocks are spread along. */
 function beltParts(): Part[] {
-  return [{ shape: new THREE.TorusGeometry(0.034, 0.004, 4, 20), turn: [Math.PI / 2, 0, 0], tone: 1.2 }];
+  return [{ shape: new THREE.TorusGeometry(0.027, 0.0032, 4, 20), turn: [Math.PI / 2, 0, 0], tone: 1.2 }];
 }
 
 /** How many shapes a kind is drawn in. A structure is one, a hull is four. */

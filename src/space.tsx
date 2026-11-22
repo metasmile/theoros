@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import * as THREE from 'three';
 import { ChevronLeft, ChevronRight, Minus, Plus, RotateCcw, Sun } from 'lucide-react';
 import sky from '../assets/sky.jpg?url';
+import { inkOf } from './ink';
 import {
   LEVEL,
   fitView,
@@ -172,18 +173,6 @@ function Structure({ kind, colour }: { kind: 'station' | 'gate' | 'planet' | 'mo
   );
 }
 
-/** The hues a planet is drawn in by its type, so two bodies of one system are not one body twice. */
-const PLANETS = ['#a9c9da', '#c8b79b', '#9fb7a6', '#b7a9c6', '#d2c7a9', '#a6bdd0'];
-/** The metals a station is drawn in by its type; the same hue family, so a station is still a station. */
-const STATIONS = ['#e0b050', '#cfc7b8', '#c2b49c', '#d8b876'];
-
-/** One of a small set of hues for a body, from the type the place declares. */
-function shade(palette: string[], model: string | null, id: string): string {
-  let hash = 0;
-  for (const letter of model ?? id) hash = (hash * 31 + letter.charCodeAt(0)) % 100003;
-  return palette[hash % palette.length];
-}
-
 /** One unit as this board draws it: where it stands, what it is, and where it is pointed. */
 interface Marked {
   id: string;
@@ -202,21 +191,9 @@ interface Marked {
  * structure, a gate is the ring it opens, and a hauler is a hull.
  */
 function Mark({ system, picked, onPick }: { system: Marked; picked: boolean; onPick: (id: string) => void }) {
-  const colour = picked
-    ? '#ffffff'
-    : system.icon === 'gate'
-      ? '#9fc0ff'
-      : system.icon === 'station'
-        ? shade(STATIONS, system.model, system.id)
-        : system.icon === 'planet'
-          ? shade(PLANETS, system.model, system.id)
-          : system.icon === 'moon'
-            ? '#b9c2cc'
-            : system.icon === 'belt'
-              ? '#b6a184'
-              : system.icon === 'hauler'
-                ? '#9fb6c9'
-                : '#8fb2e8';
+  // The palette the board and the inventory share, so a body keeps its colour wherever it is drawn; a picked unit is
+  // white, because the pick is the reading and not the kind.
+  const colour = picked ? '#ffffff' : (inkOf(system.icon) ?? '#8fb2e8');
   return (
     <group
       position={system.at}
@@ -242,9 +219,10 @@ function Mark({ system, picked, onPick }: { system: Marked; picked: boolean; onP
         <Structure kind="belt" colour={colour} />
       ) : (
         <mesh>
-          {/* A system is a point of light, so it is drawn as one: a small body with the glow of one rather than a facet. */}
-          <sphereGeometry args={[0.006, 8, 6]} />
-          <meshBasicMaterial color={colour} transparent opacity={0.9} blending={THREE.AdditiveBlending} depthWrite={false} />
+          {/* A system is a point of light. It is drawn as a small body and not as a glowing one: an additive point is a
+              soft disc at close range, and a row of them washed the names under it into one pale smear. */}
+          <sphereGeometry args={[0.006, 10, 8]} />
+          <meshBasicMaterial color={colour} />
         </mesh>
       )}
     </group>

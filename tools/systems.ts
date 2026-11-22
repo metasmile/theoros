@@ -287,9 +287,9 @@ function placeOf(system: System) {
       at: { record: MIDDLE },
       // The probe's three frames, each standing in one scene of the run: a still sequence the shell plays as footage.
       views: [
-        { id: `${id}-probe-1`, src: `/probe/${id}-0.svg`, medium: 'image', cells: [1, 0.6], from: 0, to: 300 },
-        { id: `${id}-probe-2`, src: `/probe/${id}-1.svg`, medium: 'image', cells: [1, 0.6], from: 300, to: 900 },
-        { id: `${id}-probe-3`, src: `/probe/${id}-2.svg`, medium: 'image', cells: [1, 0.6], from: 900 },
+        { id: `${id}-probe-1`, src: `/probe/${id}-0.svg`, medium: 'image', cells: [0.65, 0.4], from: 0, to: 300 },
+        { id: `${id}-probe-2`, src: `/probe/${id}-1.svg`, medium: 'image', cells: [0.65, 0.4], from: 300, to: 900 },
+        { id: `${id}-probe-3`, src: `/probe/${id}-2.svg`, medium: 'image', cells: [0.65, 0.4], from: 900 },
       ],
     },
   };
