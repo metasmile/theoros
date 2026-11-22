@@ -93,7 +93,8 @@ table gives: a place is about six degrees of the dome along its axes once it is 
 above a degree has no room to stand clear of its neighbours.
 
 The system the pilot is in is not a hull: it is a body standing at twice the shell's radius, a sphere of radius 0.09 with
-its face shaded by a two-line shader (bright at the middle, warmer at the limb), a 0.2 corona sprite, and three planets on
+its face shaded by a two-line shader that runs from a warm cream at the middle to amber at the limb, a 0.22 corona sprite,
+and three planets on
 rings of 0.044 to 0.086 derived from the system's own id. A place's marks are read in front of it, so the star never
 stands where a station or a hull stands.
 

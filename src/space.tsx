@@ -33,7 +33,12 @@ const SUN = 2.2;
 /** How far behind the place the region's other systems stand, in shell radii. */
 const REGION = 240;
 
-/** A star's face: bright at the middle and warmer at the limb, which is the one thing a lit sphere of one colour is not. */
+/**
+ * A star's face: an amber body that runs brighter toward the middle, which is what a lit sphere of one colour is not.
+ *
+ * The disc is only two degrees across on the board, so most of what a reader sees is its middle: the core is a warm cream
+ * and the limb colour starts just outside it, where a white core left the whole star a white disc.
+ */
 const STAR_VERTEX = `
   varying vec3 vNormal;
   varying vec3 vView;
@@ -50,7 +55,7 @@ const STAR_FRAGMENT = `
   varying vec3 vView;
   void main() {
     float rim = 1.0 - max(dot(vNormal, vView), 0.0);
-    vec3 face = mix(vec3(1.0, 0.97, 0.90), vec3(1.0, 0.68, 0.28), pow(rim, 1.7));
+    vec3 face = mix(vec3(1.0, 0.87, 0.62), vec3(1.0, 0.52, 0.16), pow(rim, 0.85));
     gl_FragColor = vec4(face, 1.0);
   }
 `;
@@ -255,7 +260,7 @@ function SystemBody({ at, seed, glow }: { at: [number, number, number]; seed: st
       {/* The star is drawn at a size the band of worlds clears, glow included. A place is about ten degrees of the dome
           once it is pressed into its cell, so a face of two degrees leaves the field its own room; the three and a
           third it had before took half the field to itself. */}
-      <sprite scale={[0.2, 0.2, 1]}>
+      <sprite scale={[0.22, 0.22, 1]}>
         <spriteMaterial
           map={glow}
           color="#ffb877"
