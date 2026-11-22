@@ -311,8 +311,23 @@ function placeOf(system: System) {
   const systemName = (wanted: number) => systems.find((entry) => entry.id === wanted)?.name ?? String(wanted);
   const home: Record<string, [number, number]> = {};
 
+  // A planet is placed by its rank around its star rather than by its raw distance. Drawn to scale the inner system
+  // crowds into the star, and a world whose orbit puts it inside the sun is not a reading of the system: the order is
+  // what the source says, and the ring each world is given is this board's.
+  const order = [...one.planets].sort((left, right) => Math.hypot(left.x, left.z) - Math.hypot(right.x, right.z));
+  const ringOf = (planet: HeldPlanet) => {
+    const rank = order.indexOf(planet);
+    const span = order.length > 1 ? rank / (order.length - 1) : 0;
+    return 0.26 + span * 0.74;
+  };
+
   for (const planet of one.planets) {
-    const here = at([planet.x, planet.z]);
+    const reach = ringOf(planet);
+    const angle = Math.atan2(planet.z, planet.x);
+    const here = inside([
+      MIDDLE[0] + Math.cos(angle) * reach * REACH[0],
+      MIDDLE[1] - Math.sin(angle) * reach * REACH[1],
+    ]);
     const key = keyOf(planet.name);
     home[key] = here;
     units[key] = {
