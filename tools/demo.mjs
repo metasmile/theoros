@@ -150,9 +150,13 @@ async function act(send, [what, a, b]) {
     // and a wheel over the wrong canvas zooms the wrong picture.
     const at = (await centre('[data-region=eve-space] canvas')) ?? (await centre('canvas'));
     if (!at) return console.warn('demo: no board canvas');
-    for (let i = 0; i < (b ?? 1); i += 1) {
-      await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: at.x, y: at.y, deltaX: 0, deltaY: a });
-      await sleep(430);
+    // A zoom is one continuous push, not a handful of jumps: the delta is spread over frames, so the picture slides
+    // rather than stepping. The space's own zoom is proportional to the delta, so the total is the same either way.
+    const total = a * (b ?? 1);
+    const steps = 30;
+    for (let step = 0; step < steps; step += 1) {
+      await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: at.x, y: at.y, deltaX: 0, deltaY: total / steps });
+      await sleep(17);
     }
     return;
   }
