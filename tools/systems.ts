@@ -151,6 +151,16 @@ const slug = (name: string) =>
 
 const [, , width, height] = VIEW;
 
+/**
+ * The place is `width` by `height` and the shell bends it onto 30 degrees across and 26 up and down, so one pixel of
+ * height is worth 2.56 of a width. A ring given one radius would read as a tall lens on the board.
+ */
+const STRETCH = 26 / height / (30 / width);
+/** The elevation one pixel of the place is worth, in radians: what a ring's circumference is measured in. */
+const ELEVATION_PER_PIXEL = ((26 * Math.PI) / 180) / height;
+/** How far apart two bodies of one world are drawn, in radians. */
+const MOON_APART = 0.012;
+
 // The region's ground: one cell a system, and the cell's middle is where the system stands. The cells are nominal and not
 // the systems' real coordinates: EVE's positions are a flat map of a galaxy, and the shell this board draws is a sphere of
 // directions. What the cell is for is that the ninety places tile the shell without a gap and without an overlap.
@@ -228,37 +238,6 @@ const inside = ([x, y]: [number, number]): [number, number] => [
 
 const offsetOf = (home: [number, number], [dx, dy]: [number, number]) => inside([home[0] + dx, home[1] + dy]);
 
-/**
- * How far from the middle a body is drawn.
- *
- * The source states a position in metres, and a system is a thousand times wider than its inner planets. Drawn at that
- * scale a moon and a gate would be one point, so the radius is compressed and the bearing kept: the order and the
- * directions are the source's, and the picture is one a mark can be read in.
- */
-const R0 = 1e9;
-function radial(r: number, most: number): number {
-  if (most <= 0) return 0;
-  if (most <= R0) return r / most;
-  return Math.log1p(r / R0) / Math.log1p(most / R0);
-}
-
-/** Where one of the system's own bodies stands on the place, from its position in metres. */
-function projector(most: number) {
-  return ([x, z]: [number, number]): [number, number] => {
-    const reach = radial(Math.hypot(x, z), most);
-    const angle = Math.atan2(z, x);
-    return inside([MIDDLE[0] + Math.cos(angle) * reach * REACH[0], MIDDLE[1] - Math.sin(angle) * reach * REACH[1]]);
-  };
-}
-
-/** A moon or a belt stands round its planet, so its own distance is read at the scale of that planet's family. */
-function around(home: [number, number], body: Held, parent: Held, most: number, least: number): [number, number] {
-  const [dx, dz] = [body.x - parent.x, body.z - parent.z];
-  const angle = Math.atan2(dz, dx);
-  const size = least + (most > 0 ? (Math.hypot(dx, dz) / most) * 9 : 0);
-  return inside([home[0] + Math.cos(angle) * size, home[1] - Math.sin(angle) * size]);
-}
-
 /** The station the market capture reads, as ESI numbers it; the run's own name for it is `jita-4-4`. */
 const MARKET_STATION = 60003760;
 
@@ -305,29 +284,34 @@ function placeOf(system: System) {
     return key;
   };
 
-  const bodies = [...one.planets, ...one.gates, ...one.stations];
-  const most = Math.max(...bodies.map((body) => Math.hypot(body.x, body.z)), 0);
-  const at = projector(most);
   const systemName = (wanted: number) => systems.find((entry) => entry.id === wanted)?.name ?? String(wanted);
   const home: Record<string, [number, number]> = {};
 
-  // A planet is placed by its rank around its star rather than by its raw distance. Drawn to scale the inner system
-  // crowds into the star, and a world whose orbit puts it inside the sun is not a reading of the system: the order is
-  // what the source says, and the ring each world is given is this board's.
-  const order = [...one.planets].sort((left, right) => Math.hypot(left.x, left.z) - Math.hypot(right.x, right.z));
-  const ringOf = (planet: HeldPlanet) => {
-    const rank = order.indexOf(planet);
-    const span = order.length > 1 ? rank / (order.length - 1) : 0;
-    return 0.22 + span * 0.78;
+  // A body is placed by its rank among its own kind, not by its raw distance. Drawn to scale the inner system is one
+  // pile on the star, and space is the one thing a system has plenty of: what the source says is the order, and the
+  // bearing and the ring are this board's.
+  //
+  // Each kind holds a band of its own, so a berth never stands where a world does and a gate stands on the rim. The
+  // innermost band starts outside the star `space.tsx` draws, whose face spans three and a third degrees of the pane.
+  const ringOf = (list: Held[], [from, to]: [number, number], phase: number) => {
+    const order = [...list].sort((left, right) => Math.hypot(left.x, left.z) - Math.hypot(right.x, right.z));
+    return (body: Held): [number, number] => {
+      const rank = order.indexOf(body);
+      // A kind that holds one body stands it in the middle of its band rather than on the band's own edge.
+      const span = order.length > 1 ? rank / (order.length - 1) : 0.5;
+      const reach = from + span * (to - from);
+      // A system's bodies share a plane, so the bearings the source states put them on one line. The order is what this
+      // keeps, and the bearing a body is given is its rank.
+      const angle = (rank / Math.max(order.length, 1)) * Math.PI * 2 + phase;
+      return inside([MIDDLE[0] + Math.cos(angle) * reach * REACH[0], MIDDLE[1] - Math.sin(angle) * reach * REACH[1]]);
+    };
   };
+  const planetSpot = ringOf(one.planets, [0.4, 0.62], 0.7);
+  const stationSpot = ringOf(one.stations, [0.745, 0.8], 1.9);
+  const gateSpot = ringOf(one.gates, [0.945, 1], 3.1);
 
   for (const planet of one.planets) {
-    const reach = ringOf(planet);
-    const angle = Math.atan2(planet.z, planet.x);
-    const here = inside([
-      MIDDLE[0] + Math.cos(angle) * reach * REACH[0],
-      MIDDLE[1] - Math.sin(angle) * reach * REACH[1],
-    ]);
+    const here = planetSpot(planet);
     const key = keyOf(planet.name);
     home[key] = here;
     units[key] = {
@@ -337,14 +321,30 @@ function placeOf(system: System) {
       attributes: { facts: [{ label: 'type', value: planet.typeName }] },
       at: { record: here },
     };
-    const mostMoon = Math.max(...planet.moons.map((moon) => Math.hypot(moon.x - planet.x, moon.z - planet.z)), 0);
-    for (const moon of planet.moons) {
-      units[keyOf(moon.name)] = { icon: 'moon', label: moon.name, at: { record: around(here, moon, planet, mostMoon, 9) } };
-    }
-    const mostBelt = Math.max(...planet.belts.map((belt) => Math.hypot(belt.x - planet.x, belt.z - planet.z)), 0);
-    for (const belt of planet.belts) {
-      units[keyOf(belt.name)] = { icon: 'belt', label: belt.name, at: { record: around(here, belt, planet, mostBelt, 8) } };
-    }
+    // What a world holds is drawn round it: a moon's real bearing is metres from a planet that is a dot here, so the
+    // bodies ring their world. A ring holds what its circumference allows at a readable spacing, and a world with many
+    // bodies takes another ring rather than a denser one, which is what keeps a hundred moons off two radii.
+    const ringed = (count: number): [number, number][] => {
+      const spots: [number, number][] = [];
+      for (let ring = 0; spots.length < count; ring += 1) {
+        const size = 6 + ring * 6;
+        const fits = Math.max(4, Math.floor((Math.PI * 2 * size * ELEVATION_PER_PIXEL) / MOON_APART));
+        for (let index = 0; index < fits && spots.length < count; index += 1) {
+          const angle = (index / fits) * Math.PI * 2 + 0.6 + ring * 0.9;
+          spots.push([Math.cos(angle) * size * STRETCH, -Math.sin(angle) * size]);
+        }
+      }
+      return spots;
+    };
+    const spots = ringed(planet.moons.length + planet.belts.length);
+    planet.moons.forEach((moon, index) => {
+      const [dx, dy] = spots[index];
+      units[keyOf(moon.name)] = { icon: 'moon', label: moon.name, at: { record: inside([here[0] + dx, here[1] + dy]) } };
+    });
+    planet.belts.forEach((belt, index) => {
+      const [dx, dy] = spots[planet.moons.length + index];
+      units[keyOf(belt.name)] = { icon: 'belt', label: belt.name, at: { record: inside([here[0] + dx, here[1] + dy]) } };
+    });
   }
 
   for (const gate of one.gates) {
@@ -353,13 +353,13 @@ function placeOf(system: System) {
     const dest = slug(to);
     const key = dest !== id && namedByMarket.has(dest) && !taken.has(dest) ? dest : keyOf(to);
     taken.add(key);
-    units[key] = { icon: 'gate', label: `to ${to}`, at: { record: at([gate.x, gate.z]) } };
+    units[key] = { icon: 'gate', label: `to ${to}`, at: { record: gateSpot(gate) } };
   }
 
   for (const station of one.stations) {
     const key = station.id === MARKET_STATION ? 'jita-4-4' : keyOf(station.name);
     taken.add(key);
-    home[key] = at([station.x, station.z]);
+    home[key] = stationSpot(station);
     units[key] = {
       icon: 'station',
       label: station.name,
@@ -379,17 +379,27 @@ function placeOf(system: System) {
   }
 
   if (system.name === fleet.system.name) {
-    // The fleet stands in the system it fought in, round its star.
-    roster.forEach((pilot, index) => {
+    // The fleet stands in the system it fought in, round its star: the pilots on one ring and the hulls they flew on the
+    // next, both inside the first band of worlds.
+    const circle = (count: number, reach: number, phase: number): [number, number][] =>
+      Array.from({ length: count }, (_, index) => {
+        const angle = (index / Math.max(count, 1)) * Math.PI * 2 + phase;
+        return inside([
+          MIDDLE[0] + Math.cos(angle) * reach * REACH[0],
+          MIDDLE[1] - Math.sin(angle) * reach * REACH[1],
+        ]);
+      });
+    circle(roster.length, 0.2, 0.7).forEach((at, index) => {
+      const pilot = roster[index];
       units[pilot.id] = {
         icon: 'person',
         label: pilot.name,
         role: pilot === commander ? 'admin' : 'member',
-        at: { record: offsetOf(MIDDLE, [-34 + (index % 4) * 22, -26 + Math.floor(index / 4) * 20]) },
+        at: { record: at },
       };
     });
-    hulls.forEach((hull, index) => {
-      units[slug(hull)] = { icon: 'hauler', label: hull, at: { record: offsetOf(MIDDLE, [-92, -20 + index * 24]) } };
+    circle(hulls.length, 0.28, 1.1).forEach((at, index) => {
+      units[slug(hulls[index])] = { icon: 'hauler', label: hulls[index], at: { record: at } };
     });
   }
 
@@ -569,12 +579,16 @@ function probeFrame(system: System, one: HeldSystem, step: number): string {
   const [width, height] = [640, 360];
   const [mx, my] = [width / 2, height / 2];
   const reach = 132;
-  const most = Math.max(...one.planets.map((planet) => Math.hypot(planet.x, planet.z)), 1);
   const star = Math.max(14, Math.min(46, 10 + Math.log10(Math.max(one.star.radius, 1)) * 4));
-  const bodies = one.planets.map((planet) => {
-    const span = Math.hypot(planet.x, planet.z) / most;
-    const angle = Math.atan2(planet.z, planet.x);
-    const apart = 18 + span * (reach - 18);
+  // A world is placed by its rank among the system's own, as the board places it: the source states the order, and the
+  // bearing and the ring are this frame's. Read raw, the distance puts the inner worlds on the star's disc and the
+  // bearing is a plane, so a system's planets came out as a line of discs across the sun.
+  const order = [...one.planets].sort((left, right) => Math.hypot(left.x, left.z) - Math.hypot(right.x, right.z));
+  const least = star + 12;
+  const bodies = order.map((planet, rank) => {
+    const span = order.length > 1 ? rank / (order.length - 1) : 0.5;
+    const apart = least + span * (reach - least);
+    const angle = (rank / Math.max(order.length, 1)) * Math.PI * 2 + 0.7;
     return {
       x: mx + Math.cos(angle) * apart,
       y: my - Math.sin(angle) * apart,
@@ -590,7 +604,7 @@ function probeFrame(system: System, one: HeldSystem, step: number): string {
         ? `${one.planets.length} planets, ${moons} moons`
         : `${one.stations.length} berths, ${grouped(one.stations.reduce((sum, s) => sum + s.dockable, 0))} m3`;
   const rings = [0, 1, 2, 3].map(
-    (ring) => `<circle cx="${mx}" cy="${my}" r="${(18 + (ring * (reach - 18)) / 3).toFixed(1)}" fill="none"/>`,
+    (ring) => `<circle cx="${mx}" cy="${my}" r="${(least + (ring * (reach - least)) / 3).toFixed(1)}" fill="none"/>`,
   );
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
