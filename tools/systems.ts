@@ -382,6 +382,12 @@ function placeOf(system: System) {
   };
 }
 
+/** A step that reports a number, kept only when the source answered one: a missing reading is not a zero. */
+function reading(steps: Step[], name: string, value: number | undefined, unit: string, origin: string) {
+  if (!Number.isFinite(value)) return;
+  steps.push({ verb: 'measured', args: [name, String(value), unit, origin] });
+}
+
 /** The run a system is, as the scenario language writes it. */
 function captureOf(system: System, place: ReturnType<typeof placeOf>): Capture {
   const id = slug(system.name);
@@ -389,36 +395,39 @@ function captureOf(system: System, place: ReturnType<typeof placeOf>): Capture {
   if (!one) throw new Error(`${system.name} is not in capture/units.json`);
   const moons = one.planets.reduce((count, planet) => count + planet.moons.length, 0);
   const belts = one.planets.reduce((count, planet) => count + planet.belts.length, 0);
-  const scene: Scene = {
-    at: 0,
-    note: `00:00 ${system.name} is read.`,
-    steps: [
-      { verb: 'measured', args: ['security', String(system.sec), 'rating', `${id}/system`] },
-      { verb: 'measured', args: ['gates', String(system.gates), 'gates', `${id}/system`] },
-      { verb: 'measured', args: ['stations', String(system.stations), 'stations', `${id}/system`] },
-      // What the source holds below the gates and stations, so a system's run is the whole of what ESI answers for it.
-      { verb: 'measured', args: ['planets', String(one.planets.length), 'planets', `${id}/system`] },
-      { verb: 'measured', args: ['moons', String(moons), 'moons', `${id}/system`] },
-      { verb: 'measured', args: ['belts', String(belts), 'belts', `${id}/system`] },
-      { verb: 'measured', args: ['star-temperature', String(one.star.temperature), 'K', `${id}/star`] },
-    ],
-  };
-  const scenes: Scene[] = [scene];
+  const berths = one.stations.reduce((sum, station) => sum + station.dockable, 0);
+  const services = new Set(one.stations.flatMap((station) => station.services));
+
+  // What the source holds for the system, its star and its berths: a reading carries the unit ESI answered it in, so a
+  // temperature is not a distance and a berth volume is not a rating.
+  const steps: Step[] = [
+    { verb: 'measured', args: ['security', String(system.sec), 'rating', `${id}/system`] },
+    { verb: 'measured', args: ['gates', String(system.gates), 'gates', `${id}/system`] },
+    { verb: 'measured', args: ['stations', String(system.stations), 'stations', `${id}/system`] },
+    { verb: 'measured', args: ['planets', String(one.planets.length), 'planets', `${id}/system`] },
+    { verb: 'measured', args: ['moons', String(moons), 'moons', `${id}/system`] },
+    { verb: 'measured', args: ['belts', String(belts), 'belts', `${id}/system`] },
+  ];
+  reading(steps, 'star-temperature', one.star.temperature, 'K', `${id}/star`);
+  reading(steps, 'star-radius', one.star.radius, 'm', `${id}/star`);
+  reading(steps, 'star-age', one.star.age, 'years', `${id}/star`);
+  reading(steps, 'star-luminosity', one.star.luminosity, 'solar', `${id}/star`);
+  reading(steps, 'berth-volume', berths, 'm3', `${id}/station`);
+  reading(steps, 'services', services.size, 'services', `${id}/station`);
+
+  const scenes: Scene[] = [{ at: 0, note: `00:00 ${system.name} is read.`, steps }];
   if (system.name === fleet.system.name) {
-    const steps: Step[] = [
-      { verb: 'measured', args: ['fleet-pilots', String(roster.length), 'pilots', `${id}/fleet`] },
-      { verb: 'measured', args: ['fleet-kills', String(fleet.kills.length), 'hulls', `${id}/fleet`] },
-    ];
     scenes.push({
       at: 600,
       note: `00:10 The fleet: ${roster.length} pilots, from killmails ${fleet.kills.map((kill) => kill.id).join(' and ')}, read on 2026-11-17 (server 3707965).`,
-      steps,
+      steps: [
+        { verb: 'measured', args: ['fleet-pilots', String(roster.length), 'pilots', `${id}/fleet`] },
+        { verb: 'measured', args: ['fleet-kills', String(fleet.kills.length), 'hulls', `${id}/fleet`] },
+      ],
     });
   }
-  // Every system's run carries one chain as well as its measurements, so the record model is visible in a place that is
-  // not the market.
-  const watch = watchScene(system, place, id);
-  if (watch) scenes.push(watch);
+  // The work a system declares beside its measurements, so the record model is visible in a place that is not the market.
+  scenes.push(...chainsOf(system, one, place, id));
   return {
     pin: SYSTEMS_PIN,
     title: `${system.name}, The Forge.`,
@@ -433,26 +442,71 @@ function captureOf(system: System, place: ReturnType<typeof placeOf>): Capture {
   };
 }
 
+/** The station unit key for a station's name, since a claim is made by a unit the place already holds. */
+function berthKeyOf(place: ReturnType<typeof placeOf>, name: string): string | null {
+  for (const [key, unit] of Object.entries(place.units)) {
+    if (unit.icon === 'station' && unit.label === name) return key;
+  }
+  return null;
+}
+
 /**
- * One chain beside a system's measurements: the desk states what a held system means, the watch is declared, a station
- * takes it, and the reading concludes it. It is written once and pushed by the run, so the chain is a thing this builder
- * adds to a system rather than five lines buried in its measurements.
+ * The work a system declares beside its measurements. Each chain starts at a reading this run already wrote, is taken
+ * by a berth the place already holds, and concludes a fact of its own. Three chains ask three different questions of
+ * one system, so a run shows the record model away from the market rather than one line repeated ninety times.
  */
-function watchScene(system: System, place: ReturnType<typeof placeOf>, id: string): Scene | null {
-  const watch = Object.entries(place.units).find(([, unit]) => unit.icon === 'station')?.[0] ?? null;
-  if (!watch) return null;
+function chainsOf(system: System, one: HeldSystem, place: ReturnType<typeof placeOf>, id: string): Scene[] {
+  const scenes: Scene[] = [];
   const held = system.sec >= 0.5;
-  return {
-    at: 300,
-    note: `00:05 ${system.name}'s security is watched: the desk's rule names what counts as held.`,
-    steps: [
-      { verb: 'hint', args: ['desk-rule', `${held ? 'hold' : 'watch'}-${id}`] },
-      { verb: 'intent', args: [`watch-${id}`, 'security', 'hold-the-corridor'] },
-      { verb: 'claim', args: [`watch-${id}`, watch] },
-      { verb: 'conclude', args: [`watch-${id}`, held ? 'held' : 'watched'] },
-      { verb: 'measured', args: ['after-security', String(system.sec), 'rating', `${id}/system`] },
-    ],
-  };
+
+  // A desk rule names what the system's own security reading counts as, and a berth takes the watch.
+  const watch = one.stations[0] ? berthKeyOf(place, one.stations[0].name) : null;
+  if (watch) {
+    scenes.push({
+      at: 300,
+      note: `00:05 ${system.name}'s security is watched: the desk's rule names what counts as held.`,
+      steps: [
+        { verb: 'hint', args: ['desk-rule', `${held ? 'hold' : 'watch'}-${id}`] },
+        { verb: 'intent', args: [`watch-${id}`, 'security', held ? 'hold-the-corridor' : 'watch-the-corridor'] },
+        { verb: 'claim', args: [`watch-${id}`, watch] },
+        { verb: 'conclude', args: [`watch-${id}`, held ? 'held' : 'watched'] },
+      ],
+    });
+  }
+
+  // The largest berth answers the capacity question the volume reading raised.
+  const widest = [...one.stations].sort((left, right) => right.dockable - left.dockable)[0];
+  const berth = widest ? berthKeyOf(place, widest.name) : null;
+  if (berth) {
+    scenes.push({
+      at: 900,
+      note: `00:15 ${system.name}'s berths are counted: the largest takes the capacity question.`,
+      steps: [
+        { verb: 'hint', args: ['berth-rule', `berth-${id}`] },
+        { verb: 'intent', args: [`clear-${id}`, 'berth-volume', 'take-the-berth'] },
+        { verb: 'claim', args: [`clear-${id}`, berth] },
+        { verb: 'conclude', args: [`clear-${id}`, 'capacity-known'] },
+      ],
+    });
+  }
+
+  // A yard that refines answers the yield question the belt count raised.
+  const refiner = one.stations.find((station) => station.services.includes('reprocessing-plant'));
+  const yard = refiner ? berthKeyOf(place, refiner.name) : null;
+  if (yard) {
+    scenes.push({
+      at: 1200,
+      note: `00:20 ${system.name} refines: the belt count is the yield question, and the yard answers it.`,
+      steps: [
+        { verb: 'hint', args: ['yield-rule', `yield-${id}`] },
+        { verb: 'intent', args: [`refine-${id}`, 'belts', 'read-the-belt'] },
+        { verb: 'claim', args: [`refine-${id}`, yard] },
+        { verb: 'conclude', args: [`refine-${id}`, 'yield-known'] },
+      ],
+    });
+  }
+
+  return scenes;
 }
 
 /** A run is read before it is kept: a verb this build does not model, or a count that does not derive, is a failure. */
