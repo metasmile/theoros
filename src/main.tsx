@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 // read; the region beside it and the records, the intents and the act are this app's and the frame's.
 import '@ssccsorg/skene-view-shell';
 import '@ssccsorg/skene-view-graph';
+// Footage: the kind a probe's still sequence is drawn by. Nothing else here declares a media view, so the package is
+// installed for the probe and its absence is a board with no picture rather than a board that fails.
+import '@ssccsorg/skene-view-media';
 import './space';
 import './system';
 import { Frame, offTheShelf } from '@ssccsorg/skene-frame';

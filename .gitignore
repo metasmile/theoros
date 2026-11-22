@@ -11,3 +11,6 @@ skene/
 projects/
 projects.json
 .demo/
+
+# The probe frames are drawn from capture/ by `npm run generate`, like the projects.
+public/probe/

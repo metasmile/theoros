@@ -30,6 +30,7 @@
     "@ssccsorg/skene-kernel": "file:./skene/packages/kernel",
     "@ssccsorg/skene-ui": "file:./skene/packages/ui",
     "@ssccsorg/skene-view-graph": "file:./skene/packages/view-graph",
+    "@ssccsorg/skene-view-media": "file:./skene/packages/view-media",
     "@ssccsorg/skene-view-shell": "file:./skene/packages/view-shell",
     "@react-three/fiber": "^9.4.0",
     "lucide-react": "^0.548.0",

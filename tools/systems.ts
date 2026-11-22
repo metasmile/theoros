@@ -26,6 +26,7 @@ import { tile } from './cells';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const APP = join(HERE, '..');
 const PROJECTS = join(APP, 'projects');
+const PROBE = join(APP, 'public', 'probe');
 
 interface System {
   id: number;
@@ -54,6 +55,14 @@ interface Unit {
   role?: string;
   abilities?: string[];
   attributes?: { facts?: { label: string; value: string }[] };
+  views?: {
+    id: string;
+    src: string;
+    medium: string;
+    cells: [number, number];
+    from?: number;
+    to?: number;
+  }[];
   at: { record: [number, number] };
 }
 
@@ -274,6 +283,12 @@ function placeOf(system: System) {
         ],
       },
       at: { record: MIDDLE },
+      // The probe's three frames, each standing in one scene of the run: a still sequence the shell plays as footage.
+      views: [
+        { id: `${id}-probe-1`, src: `/probe/${id}-0.svg`, medium: 'image', cells: [1, 0.6], from: 0, to: 300 },
+        { id: `${id}-probe-2`, src: `/probe/${id}-1.svg`, medium: 'image', cells: [1, 0.6], from: 300, to: 900 },
+        { id: `${id}-probe-3`, src: `/probe/${id}-2.svg`, medium: 'image', cells: [1, 0.6], from: 900 },
+      ],
     },
   };
 
@@ -509,6 +524,78 @@ function chainsOf(system: System, one: HeldSystem, place: ReturnType<typeof plac
   return scenes;
 }
 
+/** The colour a star's spectral class is drawn in, which is the one reading the picture shares with the run. */
+function starInk(spectral: string): string {
+  const ink: Record<string, string> = {
+    O: '#9bb0ff',
+    B: '#aabfff',
+    A: '#cad7ff',
+    F: '#f8f7ff',
+    G: '#fff4e8',
+    K: '#ffd2a1',
+    M: '#ffb56b',
+  };
+  return ink[spectral.trim().charAt(0).toUpperCase()] ?? '#e8e2d4';
+}
+
+const escapeXml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/**
+ * One frame of the probe's view, drawn from the capture the run measures: the star at the middle of the system's own
+ * coordinates, and the planets it holds placed by the bearing and distance ESI answered for them. The three frames
+ * reveal the system in the order the run reads it, so a scene's picture and that scene's numbers come from one source.
+ */
+function probeFrame(system: System, one: HeldSystem, step: number): string {
+  const [width, height] = [640, 360];
+  const [mx, my] = [width / 2, height / 2];
+  const reach = 132;
+  const most = Math.max(...one.planets.map((planet) => Math.hypot(planet.x, planet.z)), 1);
+  const star = Math.max(14, Math.min(46, 10 + Math.log10(Math.max(one.star.radius, 1)) * 4));
+  const bodies = one.planets.map((planet) => {
+    const span = Math.hypot(planet.x, planet.z) / most;
+    const angle = Math.atan2(planet.z, planet.x);
+    const apart = 18 + span * (reach - 18);
+    return {
+      x: mx + Math.cos(angle) * apart,
+      y: my - Math.sin(angle) * apart,
+      r: 2.4 + (planet.moons.length > 0 ? 1.6 : 0) + (planet.belts.length > 0 ? 1.2 : 0),
+    };
+  });
+  const shown = step === 0 ? [] : step === 1 ? bodies.slice(0, Math.ceil(bodies.length / 2)) : bodies;
+  const moons = one.planets.reduce((count, planet) => count + planet.moons.length, 0);
+  const note =
+    step === 0
+      ? `${grouped(one.star.temperature)} K, ${one.star.spectral}`
+      : step === 1
+        ? `${one.planets.length} planets, ${moons} moons`
+        : `${one.stations.length} berths, ${grouped(one.stations.reduce((sum, s) => sum + s.dockable, 0))} m3`;
+  const rings = [0, 1, 2, 3].map(
+    (ring) => `<circle cx="${mx}" cy="${my}" r="${(18 + (ring * (reach - 18)) / 3).toFixed(1)}" fill="none"/>`,
+  );
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `<rect width="${width}" height="${height}" fill="#05070c"/>`,
+    `<g stroke="#1b2436" stroke-width="0.6">${rings.join('')}</g>`,
+    `<circle cx="${mx}" cy="${my}" r="${star.toFixed(1)}" fill="${starInk(one.star.spectral)}"/>`,
+    ...shown.map(
+      (body) => `<circle cx="${body.x.toFixed(1)}" cy="${body.y.toFixed(1)}" r="${body.r.toFixed(1)}" fill="#8fa6c8"/>`,
+    ),
+    `<text x="18" y="28" fill="#e8e2d4" font-family="monospace" font-size="15">${escapeXml(system.name)}</text>`,
+    `<text x="18" y="48" fill="#7d8aa6" font-family="monospace" font-size="12">probe ${step + 1} / 3 · ${escapeXml(note)}</text>`,
+    `<text x="18" y="${height - 18}" fill="#4d586c" font-family="monospace" font-size="11">${escapeXml(one.star.typeName)}</text>`,
+    '</svg>',
+    '',
+  ].join('\n');
+}
+
+/** The probe's three frames for a system, written where the deployment serves them. */
+function writeProbe(system: System, one: HeldSystem | undefined) {
+  if (!one) return;
+  const id = slug(system.name);
+  mkdirSync(PROBE, { recursive: true });
+  for (const step of [0, 1, 2]) writeFileSync(join(PROBE, `${id}-${step}.svg`), probeFrame(system, one, step));
+}
+
 /** A run is read before it is kept: a verb this build does not model, or a count that does not derive, is a failure. */
 function checked(text: string, who: string): string {
   const parsed = parseScenario(text);
@@ -544,6 +631,7 @@ for (const system of systems) {
   const folder = join(PROJECTS, id);
   mkdirSync(folder, { recursive: true });
   const place = placeOf(system);
+  writeProbe(system, held.systems[String(system.id)]);
   writeFileSync(join(folder, 'project.json'), `${JSON.stringify(document(id, system, place), null, 2)}\n`);
   // Jita's run is the market capture and nothing else: the test that holds the run to its capture is the promise that
   // the board shows what the source said, so the corridor chain is the other systems' and not this one's.
