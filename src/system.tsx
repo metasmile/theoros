@@ -6,6 +6,7 @@
 import { Orbit } from 'lucide-react';
 import { registerReading, type Board } from '@ssccsorg/skene-frame/lib/readings';
 import { cn } from '@ssccsorg/skene-ui';
+import { inkOf } from './ink';
 
 /** The order a system is read in: the body at the middle, then what orbits, then what crosses, then what berths. */
 const KINDS = ['system', 'planet', 'moon', 'belt', 'gate', 'station', 'hauler', 'person'];
@@ -67,20 +68,33 @@ function SystemUnits({ place, pickedId, onPick }: Board) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr
-                key={row.id}
-                onClick={() => onPick(row.id)}
-                className={cn(
-                  'cursor-pointer border-t border-border/40 hover:bg-accent/40',
-                  row.id === pickedId && 'bg-accent/60 text-foreground',
-                )}
-              >
-                <td className="px-4 py-1.5 text-muted-foreground">{WORDS[row.kind] ?? row.kind}</td>
-                <td className="px-2 py-1.5">{row.label}</td>
-                <td className="px-4 py-1.5 text-muted-foreground">{row.type}</td>
-              </tr>
-            ))}
+            {rows.map((row) => {
+              const ink = inkOf(row.kind);
+              return (
+                <tr
+                  key={row.id}
+                  onClick={() => onPick(row.id)}
+                  className={cn(
+                    'cursor-pointer border-t border-border/40 hover:bg-accent/40',
+                    row.id === pickedId && 'bg-accent/60 text-foreground',
+                  )}
+                >
+                  {/* The dot is the board's own ink for this kind, so a list of thirty rows stays calm: the hue is carried
+                      by a six-pixel mark and the word beside it, not by a filled cell. */}
+                  <td className="px-4 py-1.5">
+                    <span
+                      className="inline-flex items-center gap-2 text-muted-foreground"
+                      style={ink ? { color: ink } : undefined}
+                    >
+                      <span className="size-1.5 shrink-0 rounded-full bg-current" />
+                      {WORDS[row.kind] ?? row.kind}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5">{row.label}</td>
+                  <td className="px-4 py-1.5 text-muted-foreground">{row.type}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
