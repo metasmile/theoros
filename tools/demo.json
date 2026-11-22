@@ -4,66 +4,79 @@
   "out": ".demo/skene-theoros.mp4",
   "scenes": [
     {
+      "caption": "theoros reads New Eden from EVE's own public data",
+      "say": "theoros is a board of New Eden, and it reads the game's own public data.",
+      "actions": [["wait", 900]]
+    },
+    {
       "caption": "One space, two pictures: the shell and the pane",
-      "actions": [["wait", 2400]]
+      "say": "One space, drawn twice: the sphere a system sits in, and the region beside it.",
+      "actions": [["wait", 1400]]
     },
     {
       "caption": "Zoom: the frame holds still while the units spread inside it",
-      "actions": [["wheel", -120, 3], ["wait", 1000]]
+      "say": "Zooming keeps the frame fixed, and the units spread inside it.",
+      "actions": [["wheel", -120, 3], ["wait", 400]]
     },
     {
       "caption": "Turn: the sphere moves under a frame that does not",
-      "actions": [["drag", -40, 20], ["wait", 1300]]
+      "say": "Turning moves the sphere under the frame, so the picture stays put.",
+      "actions": [["drag", -40, 20], ["wait", 400]]
     },
     {
       "caption": "Stacked: one column, the pictures one above the other",
-      "actions": [["click", ".lucide-rows-2"], ["wait", 1700]]
+      "say": "The two pictures can stack in one column.",
+      "actions": [["click", ".lucide-rows-2"], ["wait", 900]]
     },
     {
       "caption": "Side by side: the region beside the sphere",
-      "actions": [["click", ".lucide-columns-2"], ["wait", 1500]]
+      "say": "Or stand side by side, the region beside the sphere.",
+      "actions": [["click", ".lucide-columns-2"], ["wait", 700]]
     },
     {
       "caption": "The pane takes the frame",
-      "actions": [["click", ".lucide-maximize-2"], ["wait", 2300]]
+      "say": "The pane can take the whole frame.",
+      "actions": [["click", ".lucide-maximize-2"], ["wait", 1400]]
     },
     {
       "caption": "One press in, the same press out",
-      "actions": [["click", ".lucide-minimize-2"], ["wait", 1700]]
+      "say": "And one press gives it back.",
+      "actions": [["click", ".lucide-minimize-2"], ["wait", 900]]
     },
     {
       "caption": "A system is a fabric of facts: twelve readings, three chains",
-      "actions": [["clickText", "Perimeter, The Forge"], ["wait", 2900]]
+      "say": "Every system is a fabric of facts: twelve readings and three chains of work.",
+      "actions": [["clickText", "Perimeter, The Forge"], ["wait", 1800]]
     },
     {
       "caption": "A berth takes the capacity question the volume reading raised",
-      "actions": [["clickText", "take-the-berth"], ["wait", 1900]]
+      "say": "A berth takes the capacity question that the volume reading raised.",
+      "actions": [["clickText", "take-the-berth"], ["wait", 800]]
     },
     {
       "caption": "A yard answers the yield question the belt count raised",
-      "actions": [["clickText", "read-the-belt"], ["wait", 1900]]
+      "say": "A yard answers the yield question that the belt count raised.",
+      "actions": [["clickText", "read-the-belt"], ["wait", 800]]
     },
     {
       "caption": "A record is an address: pressing one seeks the run",
-      "actions": [["clickContains", "capacity-known"], ["wait", 1700]]
+      "say": "A record is an address. Press one, and the run moves to that second.",
+      "actions": [["clickContains", "capacity-known"], ["wait", 800]]
     },
     {
       "caption": "The run replays on its own",
-      "actions": [["click", ".lucide-play"], ["wait", 2900], ["click", ".lucide-pause"], ["wait", 600]]
+      "say": "The run then replays on its own.",
+      "actions": [["click", ".lucide-play"], ["wait", 1900], ["click", ".lucide-pause"], ["wait", 200]]
     },
     {
       "caption": "One run, one row a writer: each fact keeps the origin that wrote it",
-      "actions": [["click", "[aria-label='split by writer']"], ["wait", 2000]]
+      "say": "Read by writer, every fact keeps the origin that wrote it.",
+      "actions": [["click", "[aria-label='split by writer']"], ["wait", 900]]
     },
     {
       "caption": "Find reaches every system, not just this one",
-      "actions": [
-        ["click", "[data-region=find]"],
-        ["wait", 600],
-        ["click", "[data-region=find-palette] input"],
-        ["text", "storage"],
-        ["wait", 1700]
-      ]
+      "say": "And find reaches every system, not only the one you stand in.",
+      "actions": [["click", "[data-region=find]"], ["wait", 400], ["click", "[data-region=find-palette] input"], ["text", "storage"], ["wait", 900]]
     }
   ]
 }

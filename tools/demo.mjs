@@ -16,7 +16,7 @@
 // more file to compose rather than a surface to fight.
 
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +27,10 @@ const PORT = Number(process.env.DEMO_PORT ?? 9333);
 const FONT = process.env.DEMO_FONT ?? '/System/Library/Fonts/Supplemental/Arial.ttf';
 
 const script = JSON.parse(readFileSync(join(ROOT, 'tools/demo.json'), 'utf8'));
+// The narration's own lengths, when `npm run voice` has written them: a scene holds for its sentence.
+const voices = existsSync(join(ROOT, '.demo/voice-times.json'))
+  ? JSON.parse(readFileSync(join(ROOT, '.demo/voice-times.json'), 'utf8'))
+  : null;
 const [width, height] = script.size ?? [1920, 1080];
 const frames = mkdtempSync(join(tmpdir(), 'theoros-demo-'));
 const profile = mkdtempSync(join(tmpdir(), 'theoros-chrome-'));
@@ -202,9 +206,14 @@ async function main() {
     await send('Page.startScreencast', { format: 'jpeg', quality: 92, maxWidth: width, maxHeight: height, everyNthFrame: 1 });
 
     const captions = [];
-    for (const scene of script.scenes) {
+    if (!voices) console.warn('demo: no voice times, so every scene holds for its own wait alone');
+    for (const [index, scene] of script.scenes.entries()) {
       const from = clock();
       for (const action of scene.actions) await act(send, action);
+      // A scene with a line holds until that line has been spoken, so a caption never changes under a sentence.
+      // The line's length is in seconds and the sleeper takes milliseconds.
+      const spoken = (voices?.lines?.[index]?.length ?? 0) * 1000;
+      if (spoken > 0) await sleep(Math.max(0, spoken + 600 - (clock() - from) * 1000));
       captions.push({ text: scene.caption, from, to: clock() });
     }
     await send('Page.stopScreencast');
