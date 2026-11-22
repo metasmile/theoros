@@ -212,9 +212,9 @@ async function main() {
       for (const action of scene.actions) await act(send, action);
       // A scene with a line holds until that line has been spoken, so a caption never changes under a sentence.
       // The line's length is in seconds and the sleeper takes milliseconds.
-      const spoken = (voices?.lines?.[index]?.length ?? 0) * 1000;
+      const spoken = (scene.say ? (voices?.lines?.[index]?.length ?? 0) : 0) * 1000;
       if (spoken > 0) await sleep(Math.max(0, spoken + 600 - (clock() - from) * 1000));
-      captions.push({ text: scene.caption, from, to: clock() });
+      captions.push({ text: scene.caption ?? null, from, to: clock() });
     }
     await send('Page.stopScreencast');
     const end = clock();
@@ -226,11 +226,14 @@ async function main() {
     );
 
     // A caption holds from its own scene until the next one begins, so nothing is unlabelled while the page moves.
-    const windows = captions.map((caption, index) => ({
-      text: caption.text,
-      from: Math.max(caption.from + 0.1, 0.15),
-      to: (captions[index + 1]?.from ?? end) - 0.15,
-    }));
+    // A storyboard may leave the caption out, which is a demo that carries no text at all.
+    const windows = captions
+      .map((caption, index) => ({
+        text: caption.text,
+        from: Math.max(caption.from + 0.1, 0.15),
+        to: (captions[index + 1]?.from ?? end) - 0.15,
+      }))
+      .filter((window) => window.text);
 
     mkdirSync(dirname(join(ROOT, script.out)), { recursive: true });
     writeFileSync(join(frames, 'list.txt'), concatOf(seen));
@@ -249,14 +252,17 @@ async function main() {
       ]);
       if (made.status !== 0) throw new Error('magick could not render a caption');
     }
+    // A storyboard with no captions is encoded as it was captured, with no overlay graph at all.
+    const overlay = windows.length
+      ? ['-filter_complex', overlayOf(windows), '-map', `[v${windows.length}]`]
+      : [];
     execFileSync('ffmpeg', [
       '-y',
       '-f', 'concat',
       '-safe', '0',
       '-i', join(frames, 'list.txt'),
       ...windows.flatMap((_, index) => ['-i', join(frames, `cap${index + 1}.png`)]),
-      '-filter_complex', overlayOf(windows),
-      '-map', `[v${windows.length}]`,
+      ...overlay,
       '-c:v', 'libx264',
       '-pix_fmt', 'yuv420p',
       '-crf', '20',

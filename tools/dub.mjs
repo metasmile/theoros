@@ -37,6 +37,7 @@ const placed = voiced.lines.filter(Boolean).map((line) => {
   if (!scene) throw new Error(`line ${line.index} has no scene`);
   return { ...line, at: scene.from + 0.12, scene };
 });
+if (placed.length === 0) throw new Error('the storyboard has no `say`, so there is nothing to mix');
 
 for (let index = 1; index < placed.length; index += 1) {
   const before = placed[index - 1];
