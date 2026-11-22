@@ -383,7 +383,7 @@ function placeOf(system: System) {
 }
 
 /** The run a system is, as the scenario language writes it. */
-function captureOf(system: System): Capture {
+function captureOf(system: System, place: ReturnType<typeof placeOf>): Capture {
   const id = slug(system.name);
   const one = held.systems[String(system.id)];
   if (!one) throw new Error(`${system.name} is not in capture/units.json`);
@@ -415,6 +415,10 @@ function captureOf(system: System): Capture {
       steps,
     });
   }
+  // Every system's run carries one chain as well as its measurements, so the record model is visible in a place that is
+  // not the market.
+  const watch = watchScene(system, place, id);
+  if (watch) scenes.push(watch);
   return {
     pin: SYSTEMS_PIN,
     title: `${system.name}, The Forge.`,
@@ -426,6 +430,28 @@ function captureOf(system: System): Capture {
     ],
     seed: 7,
     scenes,
+  };
+}
+
+/**
+ * One chain beside a system's measurements: the desk states what a held system means, the watch is declared, a station
+ * takes it, and the reading concludes it. It is written once and pushed by the run, so the chain is a thing this builder
+ * adds to a system rather than five lines buried in its measurements.
+ */
+function watchScene(system: System, place: ReturnType<typeof placeOf>, id: string): Scene | null {
+  const watch = Object.entries(place.units).find(([, unit]) => unit.icon === 'station')?.[0] ?? null;
+  if (!watch) return null;
+  const held = system.sec >= 0.5;
+  return {
+    at: 300,
+    note: `00:05 ${system.name}'s security is watched: the desk's rule names what counts as held.`,
+    steps: [
+      { verb: 'hint', args: ['desk-rule', `${held ? 'hold' : 'watch'}-${id}`] },
+      { verb: 'intent', args: [`watch-${id}`, 'security', 'hold-the-corridor'] },
+      { verb: 'claim', args: [`watch-${id}`, watch] },
+      { verb: 'conclude', args: [`watch-${id}`, held ? 'held' : 'watched'] },
+      { verb: 'measured', args: ['after-security', String(system.sec), 'rating', `${id}/system`] },
+    ],
   };
 }
 
@@ -441,7 +467,7 @@ function checked(text: string, who: string): string {
   return text;
 }
 
-const document = (id: string, system: System) => ({
+const document = (id: string, system: System, place: ReturnType<typeof placeOf>) => ({
   id,
   resources: [
     { kind: 'abilities', at: ABILITIES },
@@ -451,7 +477,7 @@ const document = (id: string, system: System) => ({
     { kind: 'views', at: VIEWS },
     { kind: 'clock', at: { record: `00:00, ${system.name} is read` } },
     { kind: 'status', at: system.name === fleet.system.name ? 'running' : 'idle' },
-    { kind: 'place', at: placeOf(system) },
+    { kind: 'place', at: place },
   ],
 });
 
@@ -463,8 +489,11 @@ for (const system of systems) {
   seen.add(id);
   const folder = join(PROJECTS, id);
   mkdirSync(folder, { recursive: true });
-  writeFileSync(join(folder, 'project.json'), `${JSON.stringify(document(id, system), null, 2)}\n`);
-  const capture = id === 'jita' ? market : captureOf(system);
+  const place = placeOf(system);
+  writeFileSync(join(folder, 'project.json'), `${JSON.stringify(document(id, system, place), null, 2)}\n`);
+  // Jita's run is the market capture and nothing else: the test that holds the run to its capture is the promise that
+  // the board shows what the source said, so the corridor chain is the other systems' and not this one's.
+  const capture = id === 'jita' ? market : captureOf(system, place);
   const run = checked(runOf(capture), `projects/${id}/run.txt`);
   writeFileSync(join(folder, 'run.txt'), run);
   written.push(id);
