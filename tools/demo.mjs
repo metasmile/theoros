@@ -210,6 +210,12 @@ async function main() {
     await send('Page.stopScreencast');
     const end = clock();
 
+    // Where each scene began, so a dub can be cut to the picture rather than to a second count kept by hand.
+    writeFileSync(
+      join(ROOT, '.demo', 'demo-times.json'),
+      `${JSON.stringify({ seconds: end, scenes: captions.map((caption, index) => ({ text: caption.text, from: caption.from, to: captions[index + 1]?.from ?? end })) }, null, 2)}\n`,
+    );
+
     // A caption holds from its own scene until the next one begins, so nothing is unlabelled while the page moves.
     const windows = captions.map((caption, index) => ({
       text: caption.text,

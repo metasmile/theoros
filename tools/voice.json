@@ -1,0 +1,14 @@
+{
+  "voice": "bm_george",
+  "speed": 0.92,
+  "out": ".demo/skene-theoros-voiced.mp4",
+  "lines": [
+    { "at": 0.4, "text": "The Forge. Ninety systems." },
+    { "at": 5.6, "text": "The frame holds. The sphere turns." },
+    { "at": 12.5, "text": "The pane takes the frame." },
+    { "at": 17.3, "text": "Perimeter. Twelve readings, three chains." },
+    { "at": 21.0, "text": "A berth answers capacity. A yard answers yield." },
+    { "at": 26.2, "text": "A record is an address." },
+    { "at": 31.4, "text": "One row a writer. Find reaches every system." }
+  ]
+}

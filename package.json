@@ -22,7 +22,8 @@
     "board": "node tools/board.mjs",
     "systems": "tsx tools/systems.ts",
     "capture": "tsx tools/capture.ts",
-    "demo": "node tools/demo.mjs"
+    "demo": "node tools/demo.mjs",
+    "dub": "node tools/dub.mjs"
   },
   "dependencies": {
     "@ssccsorg/skene-board": "file:./skene/packages/board",
