@@ -1,0 +1,69 @@
+{
+  "url": "http://localhost:5300/space",
+  "size": [1920, 1080],
+  "out": ".demo/skene-theoros.mp4",
+  "scenes": [
+    {
+      "caption": "One space, two pictures: the shell and the pane",
+      "actions": [["wait", 2400]]
+    },
+    {
+      "caption": "Zoom: the frame holds still while the units spread inside it",
+      "actions": [["wheel", -120, 3], ["wait", 1000]]
+    },
+    {
+      "caption": "Turn: the sphere moves under a frame that does not",
+      "actions": [["drag", -40, 20], ["wait", 1300]]
+    },
+    {
+      "caption": "Stacked: one column, the pictures one above the other",
+      "actions": [["click", ".lucide-rows-2"], ["wait", 1700]]
+    },
+    {
+      "caption": "Side by side: the region beside the sphere",
+      "actions": [["click", ".lucide-columns-2"], ["wait", 1500]]
+    },
+    {
+      "caption": "The pane takes the frame",
+      "actions": [["click", ".lucide-maximize-2"], ["wait", 2300]]
+    },
+    {
+      "caption": "One press in, the same press out",
+      "actions": [["click", ".lucide-minimize-2"], ["wait", 1700]]
+    },
+    {
+      "caption": "A system is a fabric of facts: twelve readings, three chains",
+      "actions": [["clickText", "Perimeter, The Forge"], ["wait", 2900]]
+    },
+    {
+      "caption": "A berth takes the capacity question the volume reading raised",
+      "actions": [["clickText", "take-the-berth"], ["wait", 1900]]
+    },
+    {
+      "caption": "A yard answers the yield question the belt count raised",
+      "actions": [["clickText", "read-the-belt"], ["wait", 1900]]
+    },
+    {
+      "caption": "A record is an address: pressing one seeks the run",
+      "actions": [["clickContains", "capacity-known"], ["wait", 1700]]
+    },
+    {
+      "caption": "The run replays on its own",
+      "actions": [["click", ".lucide-play"], ["wait", 2900], ["click", ".lucide-pause"], ["wait", 600]]
+    },
+    {
+      "caption": "One run, one row a writer: each fact keeps the origin that wrote it",
+      "actions": [["click", "[aria-label='split by writer']"], ["wait", 2000]]
+    },
+    {
+      "caption": "Find reaches every system, not just this one",
+      "actions": [
+        ["click", "[data-region=find]"],
+        ["wait", 600],
+        ["click", "[data-region=find-palette] input"],
+        ["text", "storage"],
+        ["wait", 1700]
+      ]
+    }
+  ]
+}

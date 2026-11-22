@@ -21,7 +21,8 @@
     "generate": "tsx tools/systems.ts && node tools/board.mjs",
     "board": "node tools/board.mjs",
     "systems": "tsx tools/systems.ts",
-    "capture": "tsx tools/capture.ts"
+    "capture": "tsx tools/capture.ts",
+    "demo": "node tools/demo.mjs"
   },
   "dependencies": {
     "@ssccsorg/skene-board": "file:./skene/packages/board",
