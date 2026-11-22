@@ -9,14 +9,14 @@
 // a green family for what moves between systems, and one rose for people.
 
 export const INK: Record<string, string> = {
-  system: '#ffd7a0',
-  planet: '#6fa8dc',
-  moon: '#a9c6e8',
-  belt: '#dcb556',
-  gate: '#5fc9a8',
-  station: '#e08b6b',
-  hauler: '#9fd18f',
-  person: '#d98fb0',
+  system: '#ffc247',
+  planet: '#2f8fe6',
+  moon: '#8ab4e0',
+  belt: '#c98a3c',
+  gate: '#26c2a0',
+  station: '#f2703f',
+  hauler: '#8fd14f',
+  person: '#e86aa8',
 };
 
 /** The ink a kind is drawn in, or nothing when the kind is one this board does not name. */

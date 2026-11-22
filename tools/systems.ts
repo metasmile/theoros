@@ -141,7 +141,7 @@ const VIEW: [number, number, number, number] = [0, 0, 520, 176];
 /** The middle of the box, which is where a system's own star stands. */
 const MIDDLE: [number, number] = [260, 88];
 /** How far a body may stand from the middle of the place, which leaves room for a name beside it. */
-const REACH: [number, number] = [205, 64];
+const REACH: [number, number] = [206, 72];
 
 const slug = (name: string) =>
   name
@@ -318,7 +318,7 @@ function placeOf(system: System) {
   const ringOf = (planet: HeldPlanet) => {
     const rank = order.indexOf(planet);
     const span = order.length > 1 ? rank / (order.length - 1) : 0;
-    return 0.26 + span * 0.74;
+    return 0.22 + span * 0.78;
   };
 
   for (const planet of one.planets) {
@@ -339,7 +339,7 @@ function placeOf(system: System) {
     };
     const mostMoon = Math.max(...planet.moons.map((moon) => Math.hypot(moon.x - planet.x, moon.z - planet.z)), 0);
     for (const moon of planet.moons) {
-      units[keyOf(moon.name)] = { icon: 'moon', label: moon.name, at: { record: around(here, moon, planet, mostMoon, 5) } };
+      units[keyOf(moon.name)] = { icon: 'moon', label: moon.name, at: { record: around(here, moon, planet, mostMoon, 9) } };
     }
     const mostBelt = Math.max(...planet.belts.map((belt) => Math.hypot(belt.x - planet.x, belt.z - planet.z)), 0);
     for (const belt of planet.belts) {
