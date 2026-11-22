@@ -34,11 +34,13 @@ test('each kind and variant is one geometry, shared by every mark drawn in it', 
 });
 
 test('a hull is the size a mark on the shell is allowed to be', () => {
+  // The floor is the place's own scale, not a taste: a place is about six degrees of the dome along its axes once it is
+  // pressed into its cell, so a mark above about a degree and a half has no room to stand clear of its neighbours.
   for (const { kind, variant, geometry } of shapes()) {
     const size = sizeOf(geometry);
     const largest = Math.max(size.x, size.y, size.z);
     expect(largest, `${kind} ${variant} is at most 0.08`).toBeLessThanOrEqual(0.08);
-    expect(largest, `${kind} ${variant} is a mark rather than a speck`).toBeGreaterThan(0.03);
+    expect(largest, `${kind} ${variant} is a mark rather than a speck`).toBeGreaterThan(0.02);
     const middle = centreOf(geometry);
     expect(Math.abs(middle.x), `${kind} ${variant} x`).toBeLessThanOrEqual(0.01);
     expect(Math.abs(middle.y), `${kind} ${variant} y`).toBeLessThanOrEqual(0.01);
@@ -99,7 +101,8 @@ test('the hauler is longer than it is wide, and tapers to its nose', () => {
     expect(size.z, `variant ${variant} length against height`).toBeGreaterThan(size.y);
 
     const position = geometry.getAttribute('position');
-    const front = geometry.boundingBox!.min.z + 0.006;
+    // The front eighth of the hull, taken as a fraction of its own length so the band holds whatever scale a mark is drawn at.
+    const front = geometry.boundingBox!.min.z + size.z * 0.078;
     let widest = 0;
     let nose = 0;
     for (let index = 0; index < position.count; index += 1) {

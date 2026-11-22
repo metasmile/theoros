@@ -242,7 +242,7 @@ function SystemBody({ at, seed, glow }: { at: [number, number, number]; seed: st
     for (const letter of seed) state = (state * 31 + letter.charCodeAt(0)) % 100003;
     const next = () => ((state = (state * 16807) % 2147483647) / 2147483647);
     return Array.from({ length: 3 }, (_, index) => ({
-      orbit: (0.045 + next() * 0.02 + index * 0.022) * SUN,
+      orbit: (0.02 + next() * 0.01 + index * 0.012) * SUN,
       tilt: (next() - 0.5) * 1.2,
       turn: next() * Math.PI * 2,
       angle: next() * Math.PI * 2,
@@ -252,10 +252,10 @@ function SystemBody({ at, seed, glow }: { at: [number, number, number]; seed: st
 
   return (
     <group position={[at[0] * SUN, at[1] * SUN, at[2] * SUN]}>
-      {/* The star is drawn at a size the innermost band of worlds clears, glow included: at this distance the face spans
-          three and a third degrees of the pane and the halo a little more, where a bigger star put the first ring of
-          worlds on its own surface. */}
-      <sprite scale={[0.36, 0.36, 1]}>
+      {/* The star is drawn at a size the band of worlds clears, glow included. A place is about ten degrees of the dome
+          once it is pressed into its cell, so a face of two degrees leaves the field its own room; the three and a
+          third it had before took half the field to itself. */}
+      <sprite scale={[0.2, 0.2, 1]}>
         <spriteMaterial
           map={glow}
           color="#ffb877"
@@ -266,7 +266,7 @@ function SystemBody({ at, seed, glow }: { at: [number, number, number]; seed: st
         />
       </sprite>
       <mesh>
-        <sphereGeometry args={[0.16, 48, 32]} />
+        <sphereGeometry args={[0.09, 48, 32]} />
         <shaderMaterial vertexShader={STAR_VERTEX} fragmentShader={STAR_FRAGMENT} toneMapped={false} />
       </mesh>
       {worlds.map((world, index) => (

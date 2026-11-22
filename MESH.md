@@ -74,26 +74,30 @@ camera's eye.
 
 Current mark sizes, in the same units:
 
-| Mark | Geometry | Bounding box | Triangles |
+| Mark | Geometry | Drawn | Triangles |
 |---|---|---|---|
-| hauler 0, freight | a spine, containers, fins and radiators | 0.045 x 0.034 x 0.072 | 312 |
-| hauler 1, armoured | the spine with prow plates, skirts and a turret ring | 0.045 x 0.030 x 0.072 | 344 |
-| hauler 2, recon | the spine with a forward boom, a mast and a dish | 0.045 x 0.039 x 0.076 | 340 |
-| hauler 3, twin | the spine with two tail booms, fins and a second row | 0.045 x 0.031 x 0.077 | 336 |
-| station | a core, a torus, four spokes, a mast, drums and a collar | 0.059 x 0.052 x 0.062 | 376 |
-| gate | three tori, four anchors, an arm and four struts | 0.046 x 0.053 x 0.046 | 508 |
-| planet | a sphere with one lit band | 0.069 x 0.064 x 0.069 | 588 |
-| moon | a sphere | 0.036 x 0.036 x 0.036 | 168 |
-| belt | a flat torus | 0.076 x 0.008 x 0.076 | 160 |
-| system | a shader-shaded sphere, a corona sprite and three planets | radius 0.22 at twice the shell | none |
+| hauler 0, freight | a spine, containers, fins and radiators | 0.032 x 0.024 x 0.050 | 312 |
+| hauler 1, armoured | the spine with prow plates, skirts and a turret ring | 0.032 x 0.021 x 0.050 | 344 |
+| hauler 2, recon | the spine with a forward boom, a mast and a dish | 0.032 x 0.027 x 0.053 | 340 |
+| hauler 3, twin | the spine with two tail booms, fins and a second row | 0.032 x 0.022 x 0.054 | 336 |
+| station | a core, a torus, four spokes, a mast, drums and a collar | 0.030 x 0.026 x 0.031 | 376 |
+| gate | three tori, four anchors, an arm and four struts | 0.022 x 0.025 x 0.022 | 508 |
+| planet | a sphere with one lit band | 0.041 x 0.038 x 0.041 | 588 |
+| moon | a sphere | 0.029 x 0.029 x 0.029 | 168 |
+| belt | a flat torus | 0.044 x 0.005 x 0.044 | 160 |
+| system | a shader-shaded sphere, a corona sprite and three planets | radius 0.09 at twice the shell | none |
 | starfield | `points` | 0.018, at radius 7 to 11 | none |
 
-The system the pilot is in is not a hull: it is a body standing at twice the shell's radius, a sphere of radius 0.22 with
-its face shaded by a two-line shader (bright at the middle, warmer at the limb), a 0.9 corona sprite, and three planets of
-radius 0.03 to 0.06 on rings derived from the system's own id. A place's marks are read in front of it, so the star never
+The parts are built at the size their own numbers state and then scaled by `DRAWN` in `hulls.ts`, which is what the
+table gives: a place is about six degrees of the dome along its axes once it is pressed into its cell, so a mark much
+above a degree has no room to stand clear of its neighbours.
+
+The system the pilot is in is not a hull: it is a body standing at twice the shell's radius, a sphere of radius 0.09 with
+its face shaded by a two-line shader (bright at the middle, warmer at the limb), a 0.2 corona sprite, and three planets on
+rings of 0.044 to 0.086 derived from the system's own id. A place's marks are read in front of it, so the star never
 stands where a station or a hull stands.
 
-Longest side against the contract: the hauler's 0.077 and the belt's 0.076 are inside the 0.08 a mark is allowed, and
+Longest side against the contract: the hauler's 0.054 and the belt's 0.044 are inside the 0.08 a mark is allowed, and
 the rest sit below them so no kind of entity is drawn larger than another on the strength of what it is. A planet, a
 moon and a belt are drawn by their kind and tinted by the type the place declares, so two planets of one system are not
 one planet twice.

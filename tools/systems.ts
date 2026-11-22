@@ -160,24 +160,30 @@ const ringAt = (degrees: number): [number, number] => [degrees / ACROSS, degrees
 /** A point's bearing in the parameter the rings are drawn with, which is not its bearing in pixels. */
 const bearingOf = (point: [number, number]): number =>
   Math.atan2(-(point[1] - MIDDLE[1]) * UP, (point[0] - MIDDLE[0]) * ACROSS);
-/** A point of the place, on the ring of so many degrees at that bearing. */
-const onRing = (bearing: number, degrees: number): [number, number] => {
-  const [across, up] = ringAt(degrees);
-  return inside([MIDDLE[0] + Math.cos(bearing) * across, MIDDLE[1] - Math.sin(bearing) * up]);
-};
 
-// The rings a system is read on, in degrees of the pane. A planet's mark is two degrees across and a station's two and
-// a half, so a ring is sized by what it holds: thirteen worlds need three and a half degrees of arc between them, which
-// is a ring of seven. The star's face is three and a third degrees, and the pane's half height is thirteen, so the ring
-// of worlds clears the star and the ring of berths and gates clears the worlds' own moons.
-const WORLD_RING = 6.8;
-const OUTER_RING = 11.4;
-/** How far outside its world a cloud of moons and belts stands, and how wide that cloud is drawn. */
-const WORLD_CLOUD = 1.45;
+/**
+ * The half extent a ring is drawn in: the whole place less the margin a name beside a mark needs. A ring is a fraction of
+ * this, not of a circle, because the place is a rectangle and its corners are ground too.
+ */
+const HALF: [number, number] = [width / 2 - 2, height / 2 - 2];
+
+/** A point of the place, on the ring at that fraction of its half extent, at that bearing. */
+const spot = (fraction: number, bearing: number): [number, number] =>
+  inside([
+    MIDDLE[0] + Math.cos(bearing) * HALF[0] * fraction,
+    MIDDLE[1] - Math.sin(bearing) * HALF[1] * fraction,
+  ]);
+
+// The rings a system is read on, as fractions of the place's own half extent. A place is drawn in about six degrees of
+// the dome along its own axes once it is pressed into its cell, so the rectangle is the whole ground a system has: the
+// worlds at a little over half of it, and the berths and gates on two interleaved rows out at the edge.
+const WORLD_AT = 0.58;
+const OUTER_AT = 0.84;
+const RIM_AT = 1;
+/** How wide the cloud of moons and belts round a world is drawn, in degrees. */
 const CLOUD_WIDE = 0.5;
-/** The band between the star's face and the ring of worlds, where a unit that stands in the system rather than at a
- * body is drawn. */
-const INNER_RING = 5.2;
+/** The band between the star's face and the worlds, where a unit that stands in the system rather than at a body is. */
+const INNER_AT = 0.3;
 
 // The region's ground: one cell a system, and the cell's middle is where the system stands. The cells are nominal and not
 // the systems' real coordinates: EVE's positions are a flat map of a galaxy, and the shell this board draws is a sphere of
@@ -248,10 +254,10 @@ const ABILITIES = [
 /** The views a system stands: the sphere, the region drawn beside it, and the frame's own readings. */
 const VIEWS = { seat: 'shell', on: ['eve-space', 'eve-system', 'shell', 'records', 'graph', 'intents', 'act'] };
 
-/** Clamp a unit to the box, so a body near the edge is still drawn inside the patch. */
+/** Clamp a unit to the box: a place is a rectangle and the whole of it is ground a body may stand on. */
 const inside = ([x, y]: [number, number]): [number, number] => [
-  Math.min(Math.max(Math.round(x * 10) / 10, 10), width - 10),
-  Math.min(Math.max(Math.round(y * 10) / 10, 10), height - 10),
+  Math.min(Math.max(Math.round(x * 10) / 10, 2), width - 2),
+  Math.min(Math.max(Math.round(y * 10) / 10, 2), height - 2),
 ];
 
 /** The station the market capture reads, as ESI numbers it; the run's own name for it is `jita-4-4`. */
@@ -306,31 +312,34 @@ function placeOf(system: System) {
   // A body is placed by its rank among its own kind, not by its raw distance. Drawn to scale the inner system is one
   // pile on the star, and a system's body count is what sets its ring: what the source says is the order, and the
   // bearing and the ring are this board's.
-  const ringOf = (list: Held[], degrees: number, phase: number) => {
+  const ringOf = (list: Held[], fraction: number, phase: number) => {
     const order = [...list].sort((left, right) => Math.hypot(left.x, left.z) - Math.hypot(right.x, right.z));
     return (body: Held): [number, number] => {
       const rank = order.indexOf(body);
       // A system's bodies share a plane, so the bearings the source states put them on one line. The order is what this
       // keeps, and the bearing a body is given is its rank.
-      return onRing((rank / Math.max(order.length, 1)) * Math.PI * 2 + phase, degrees);
+      return spot(fraction, (rank / Math.max(order.length, 1)) * Math.PI * 2 + phase);
     };
   };
-  const planetSpot = ringOf(one.planets, WORLD_RING, 0.7);
+  const planetSpot = ringOf(one.planets, WORLD_AT, 0.7);
 
-  // A berth and a gate are both two and a half degrees across, so the two kinds share the outer ring instead of standing
-  // in a ring each. Their ranks are interleaved, which puts a berth and a gate about as far apart as two berths.
+  // A berth and a gate are both about a degree and a half across and there are twenty five of them in the busiest system,
+  // which is more than one ring holds. So the two kinds share two interleaved rows of the frame, and the phase is set to
+  // the top of the ring because an odd count leaves exactly one pair of neighbours sharing a row, and that is where a
+  // ring is widest between neighbours.
   const outer = [
     ...one.stations.map((body, at) => ({ body, at: (at + 0.5) / Math.max(one.stations.length, 1) })),
     ...one.gates.map((body, at) => ({ body, at: (at + 0.5) / Math.max(one.gates.length, 1) })),
   ].sort((left, right) => left.at - right.at);
   const outerSpot = new Map<Held, [number, number]>();
   outer.forEach(({ body }, index) => {
-    outerSpot.set(body, onRing((index / Math.max(outer.length, 1)) * Math.PI * 2 + 0.35, OUTER_RING));
+    const angle = (index / Math.max(outer.length, 1)) * Math.PI * 2 + Math.PI / 2;
+    outerSpot.set(body, spot(index % 2 === 0 ? RIM_AT : OUTER_AT, angle));
   });
   const outerAt = (body: Held): [number, number] => {
-    const spot = outerSpot.get(body);
-    if (!spot) throw new Error(`${body.name} has no place on the outer ring`);
-    return spot;
+    const found = outerSpot.get(body);
+    if (!found) throw new Error(`${body.name} has no place on the outer ring`);
+    return found;
   };
 
   for (const planet of one.planets) {
@@ -344,15 +353,12 @@ function placeOf(system: System) {
       attributes: { facts: [{ label: 'type', value: planet.typeName }] },
       at: { record: here },
     };
-    // What a world holds is drawn as one puff outside it: a moon's real bearing is metres from a planet that is a dot
-    // here, so its bodies stand round it at this board's scale. The puff is wider for a fuller world and capped, so it
-    // stays inside the room its world has to its neighbours and to the berths.
-    const cloud = Math.min(CLOUD_WIDE, 0.19 * Math.sqrt(planet.moons.length + planet.belts.length));
-    const [wide, tall] = ringAt(WORLD_CLOUD);
+    // What a world holds is drawn as one puff on it: a moon's real bearing is metres from a planet that is a dot here,
+    // so its bodies stand round it at this board's scale. The puff is wider for a fuller world and capped, and it stays
+    // on the world because the room inside is the star's and the room outside is the berths' and gates'.
+    const cloud = Math.min(CLOUD_WIDE, 0.2 * Math.sqrt(planet.moons.length + planet.belts.length));
     const [puff, puffUp] = ringAt(cloud);
-    // Outward from the star, in the rings' own bearing, so the puff stands clear of the world it belongs to.
-    const away = bearingOf(here);
-    const middle: [number, number] = [here[0] + Math.cos(away) * wide, here[1] - Math.sin(away) * tall];
+    const middle: [number, number] = [here[0], here[1]];
     const spots = (count: number): [number, number][] =>
       Array.from({ length: count }, (_, index) => {
         // The golden angle over a disc of even density: no two bodies share a radius at any count.
@@ -404,16 +410,12 @@ function placeOf(system: System) {
 
   if (system.name === fleet.system.name) {
     // The fleet stands in the system it fought in, round its star: the pilots on one ring and the hulls they flew on the
-    // The fleet stands in the system it fought in, round its star: the pilots on one ring and the hulls they flew on the
     // next, both inside the ring of worlds.
-    const circle = (count: number, degrees: number, phase: number): [number, number][] => {
-      const [across, up] = ringAt(degrees);
-      return Array.from({ length: count }, (_, index) => {
-        const angle = (index / Math.max(count, 1)) * Math.PI * 2 + phase;
-        return inside([MIDDLE[0] + Math.cos(angle) * across, MIDDLE[1] - Math.sin(angle) * up]);
-      });
-    };
-    circle(roster.length, 4.4, 0.7).forEach((at, index) => {
+    const circle = (count: number, fraction: number, phase: number): [number, number][] =>
+      Array.from({ length: count }, (_, index) =>
+        spot(fraction, (index / Math.max(count, 1)) * Math.PI * 2 + phase),
+      );
+    circle(roster.length, 0.3, 0.7).forEach((at, index) => {
       const pilot = roster[index];
       units[pilot.id] = {
         icon: 'person',
@@ -422,7 +424,7 @@ function placeOf(system: System) {
         at: { record: at },
       };
     });
-    circle(hulls.length, 5.8, 1.1).forEach((at, index) => {
+    circle(hulls.length, 0.44, 1.1).forEach((at, index) => {
       units[slug(hulls[index])] = { icon: 'hauler', label: hulls[index], at: { record: at } };
     });
   }
@@ -434,7 +436,7 @@ function placeOf(system: System) {
       icon: 'person',
       label: 'saltyfish11',
       role: 'admin',
-      at: { record: onRing(bearingOf(home['jita-4-4'] ?? MIDDLE), INNER_RING) },
+      at: { record: spot(INNER_AT, bearingOf(home['jita-4-4'] ?? MIDDLE)) },
     };
   }
 

@@ -282,6 +282,23 @@ const PARTS: Record<MarkKind, (variant: number) => Part[]> = {
   belt: beltParts,
 };
 
+/**
+ * How large each kind is drawn, as a fraction of the shape it is built from.
+ *
+ * A place is about six degrees of the dome along its own axes once it is pressed into its cell, so a mark of about a
+ * degree is the largest that leaves a system's worlds and its twenty five berths and gates standing apart. A hauler
+ * keeps the contract's 0.05 that reads as a ship; the rest are a mark rather than a model.
+ */
+const DRAWN: Record<MarkKind | 'exhaust', number> = {
+  hauler: 0.7,
+  station: 0.5,
+  gate: 0.47,
+  planet: 0.59,
+  moon: 0.81,
+  belt: 0.58,
+  exhaust: 0.7,
+};
+
 const shapes = new Map<string, THREE.BufferGeometry>();
 
 /**
@@ -296,6 +313,8 @@ export function markGeometry(kind: MarkKind | 'exhaust', variant = 0): THREE.Buf
   const cached = shapes.get(key);
   if (cached) return cached;
   const made = bake(kind === 'exhaust' ? exhaustParts() : PARTS[kind](shape));
+  made.scale(DRAWN[kind], DRAWN[kind], DRAWN[kind]);
+  made.computeBoundingSphere();
   shapes.set(key, made);
   return made;
 }
