@@ -54,6 +54,7 @@ interface Unit {
   model?: string;
   role?: string;
   abilities?: string[];
+  ink?: string;
   attributes?: { facts?: { label: string; value: string }[] };
   views?: {
     id: string;
@@ -136,6 +137,17 @@ const FLEET_PIN = { source: 'esi', endpoint: WEB, revision: 'server-3707965/2026
 
 /** The place every unit is laid in. */
 const VIEW: [number, number, number, number] = [0, 0, 520, 176];
+/** What each kind of body is drawn in. A celestial writes no record, so without this the board is one grey field. */
+const INK: Record<string, string> = {
+  system: '#ffd7a0',
+  planet: '#6fa8dc',
+  moon: '#a9c6e8',
+  belt: '#c9a227',
+  gate: '#5fc9a8',
+  station: '#e08b6b',
+  person: '#d98fb0',
+  hauler: '#9fd18f',
+};
 /** The middle of the box, which is where a system's own star stands. */
 const MIDDLE: [number, number] = [260, 88];
 /** How far a body may stand from the middle of the place, which leaves room for a name beside it. */
@@ -385,6 +397,9 @@ function placeOf(system: System) {
       at: { record: offsetOf(home['jita-4-4'] ?? MIDDLE, [16, 12]) },
     };
   }
+
+  // What each unit is, in the one colour the board has for what a thing is rather than what it did.
+  for (const unit of Object.values(units)) unit.ink = INK[unit.icon];
 
   return {
     view: VIEW,
