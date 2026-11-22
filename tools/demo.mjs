@@ -146,8 +146,10 @@ async function act(send, [what, a, b]) {
     return press(found);
   }
   if (what === 'wheel') {
-    const at = await centre('canvas');
-    if (!at) return console.warn('demo: no canvas');
+    // The board's own canvas and not just the first one on the page: a split board draws the region beside the sphere,
+    // and a wheel over the wrong canvas zooms the wrong picture.
+    const at = (await centre('[data-region=eve-space] canvas')) ?? (await centre('canvas'));
+    if (!at) return console.warn('demo: no board canvas');
     for (let i = 0; i < (b ?? 1); i += 1) {
       await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: at.x, y: at.y, deltaX: 0, deltaY: a });
       await sleep(430);
@@ -274,8 +276,14 @@ async function main() {
     console.log(`demo: ${script.out}, ${seen.length} frames, ${end.toFixed(2)}s, ${windows.length} captions`);
   } finally {
     browser.kill();
-    rmSync(profile, { recursive: true, force: true });
-    rmSync(frames, { recursive: true, force: true });
+    // Best effort: Chrome may still be writing the profile, and a temp directory is the system's to reclaim.
+    for (const path of [profile, frames]) {
+      try {
+        rmSync(path, { recursive: true, force: true, maxRetries: 6, retryDelay: 250 });
+      } catch {
+        // Left for the temp cleaner rather than failing a recording that is already written.
+      }
+    }
   }
 }
 

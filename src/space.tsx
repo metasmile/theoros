@@ -622,6 +622,7 @@ function EveSpace({ world, pickedId, onPick }: Board) {
   return (
     <div
       ref={box}
+      data-region="eve-space"
       className="absolute inset-0 cursor-grab overflow-hidden active:cursor-grabbing"
       onPointerDown={(event) => {
         drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
